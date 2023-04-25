@@ -318,15 +318,6 @@ where
     return (None, max_iter);
 }
 
-// TODO: ECM, (self initialize) Quadratic sieve, Lehman's Fermat(https://en.wikipedia.org/wiki/Fermat%27s_factorization_method, n_factor_lehman)
-// REF: https://pypi.org/project/primefac/
-//      http://flintlib.org/doc/ulong_extras.html#factorisation
-//      https://github.com/zademn/facto-rs/
-//      https://github.com/elmomoilanen/prime-factorization
-//      https://cseweb.ucsd.edu/~ethome/teaching/2022-cse-291-14/
-fn pollard_pp1() {}
-fn williams_pp1() {}
-
 #[cfg(test)]
 mod tests {
     use super::*;
