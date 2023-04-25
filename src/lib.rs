@@ -1,3 +1,4 @@
+#![cfg_attr(not(feature = "std"), no_std)]
 // #![doc = include_str!("../README.md")]
 
 //! This crate provides utilities for prime related functionalities and some basic number theoretic functions:
@@ -69,9 +70,11 @@ pub mod nt_funcs;
 mod integer;
 mod mint;
 mod primality;
-mod rand;
 mod tables;
 mod traits;
+
+#[cfg(not(feature = "std"))]
+extern crate alloc;
 
 pub use traits::*;
 pub mod detail {
@@ -84,4 +87,29 @@ pub mod detail {
     pub use super::mint::{Mint, SmallMint};
     pub use super::primality::{LucasUtils, PrimalityBase, PrimalityRefBase};
     pub use super::tables::SMALL_PRIMES;
+}
+
+mod stdlib {
+    #[cfg(feature = "std")]
+    pub use with_std::*;
+    #[cfg(not(feature = "std"))]
+    pub use without_std::*;
+
+    #[cfg(not(feature = "std"))]
+    pub mod without_std {
+        pub use alloc::collections;
+        pub use alloc::slice;
+        pub use alloc::vec;
+        pub use alloc::vec::Vec;
+    }
+
+    #[cfg(feature = "std")]
+    pub mod with_std {
+        pub use std::cmp;
+        pub use std::collections;
+        pub use std::iter;
+        pub use std::slice;
+        pub use std::vec;
+        pub use std::vec::Vec;
+    }
 }

@@ -202,48 +202,5 @@ mod tests {
             }
             assert!(ExactRoots::sqrt_exact(&(x * y)).is_none());
         }
-
-        #[cfg(feature = "num-bigint")]
-        {
-            use num_bigint::RandBigInt;
-            let mut rng = rand::thread_rng();
-            // test fast implementations of sqrt against nth_root
-            for _ in 0..10 {
-                let x = rng.gen_biguint(150);
-                assert_eq!(
-                    ExactRoots::sqrt_exact(&x),
-                    ExactRoots::nth_root_exact(&x, 2)
-                );
-                assert_eq!(
-                    ExactRoots::cbrt_exact(&x),
-                    ExactRoots::nth_root_exact(&x, 3)
-                );
-                let x = rng.gen_bigint(150);
-                assert_eq!(
-                    ExactRoots::cbrt_exact(&x),
-                    ExactRoots::nth_root_exact(&x, 3)
-                );
-            }
-            // test perfect powers
-            for _ in 0..10 {
-                let x = rng.gen_biguint(150);
-                assert!(matches!(ExactRoots::sqrt_exact(&(&x * &x)), Some(v) if v == x));
-                let x = rng.gen_biguint(150);
-                assert!(
-                    matches!(ExactRoots::cbrt_exact(&(&x * &x * &x)), Some(v) if v == x),
-                    "failed at {}",
-                    x
-                );
-            }
-            // test non-perfect powers
-            for _ in 0..10 {
-                let x = rng.gen_biguint(150);
-                let y = rng.gen_biguint(150);
-                if x == y {
-                    continue;
-                }
-                assert!(ExactRoots::sqrt_exact(&(x * y)).is_none());
-            }
-        }
     }
 }

@@ -1,5 +1,5 @@
 use core::default::Default;
-use std::ops::{BitAnd, BitOr};
+use core::ops::{BitAnd, BitOr};
 
 use either::Either;
 use num_integer::{Integer, Roots};

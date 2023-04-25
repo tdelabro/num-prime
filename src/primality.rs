@@ -1,4 +1,5 @@
 use crate::traits::{BitTest, ExactRoots, PrimalityUtils};
+use core::ops;
 use either::Either;
 use num_integer::{Integer, Roots};
 use num_modular::{ModularCoreOps, ModularRefOps, ModularUnaryOps};
@@ -134,8 +135,7 @@ where
 impl<T: Integer + NumRef + Clone + FromPrimitive + LucasUtils + BitTest + ModularRefOps>
     PrimalityUtils for T
 where
-    for<'r> &'r T:
-        RefNum<T> + std::ops::Shr<usize, Output = T> + ModularUnaryOps<&'r T, Output = T>,
+    for<'r> &'r T: RefNum<T> + ops::Shr<usize, Output = T> + ModularUnaryOps<&'r T, Output = T>,
 {
     #[inline]
     fn is_prp(&self, base: Self) -> bool {
@@ -373,14 +373,14 @@ impl<
 /// will be supported by most functions in `num-primes`
 pub trait PrimalityRefBase<Base>:
     RefNum<Base>
-    + std::ops::Shr<usize, Output = Base>
+    + ops::Shr<usize, Output = Base>
     + for<'r> ModularUnaryOps<&'r Base, Output = Base>
     + for<'r> ModularCoreOps<&'r Base, &'r Base, Output = Base>
 {
 }
 impl<T, Base> PrimalityRefBase<Base> for T where
     T: RefNum<Base>
-        + std::ops::Shr<usize, Output = Base>
+        + ops::Shr<usize, Output = Base>
         + for<'r> ModularUnaryOps<&'r Base, Output = Base>
         + for<'r> ModularCoreOps<&'r Base, &'r Base, Output = Base>
 {

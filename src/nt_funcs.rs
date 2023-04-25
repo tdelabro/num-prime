@@ -11,29 +11,34 @@
 //! over speed.
 //!
 
+use crate::stdlib::collections::BTreeMap;
+use crate::stdlib::vec::Vec;
+#[cfg(not(feature = "std"))]
+use num_traits::float::Float;
+
 use crate::buffer::{NaiveBuffer, PrimeBufferExt};
 use crate::factor::{one_line, pollard_rho, squfof, SQUFOF_MULTIPLIERS};
 use crate::mint::SmallMint;
 use crate::primality::{PrimalityBase, PrimalityRefBase};
 use crate::tables::{
-    MOEBIUS_ODD, SMALL_PRIMES, SMALL_PRIMES_NEXT, WHEEL_NEXT, WHEEL_PREV,
-    WHEEL_SIZE,
+    MOEBIUS_ODD, SMALL_PRIMES, SMALL_PRIMES_NEXT, WHEEL_NEXT, WHEEL_PREV, WHEEL_SIZE,
 };
 #[cfg(feature = "big-table")]
 use crate::tables::{SMALL_PRIMES_INV, ZETA_LOG_TABLE};
 use crate::traits::{FactorizationConfig, Primality, PrimalityTestConfig, PrimalityUtils};
 use crate::{BitTest, ExactRoots};
+use core::convert::TryFrom;
+use core::iter;
 use num_integer::Roots;
 #[cfg(feature = "num-bigint")]
 use num_modular::DivExact;
 use num_modular::{ModularCoreOps, ModularInteger, MontgomeryInt};
 use num_traits::{CheckedAdd, FromPrimitive, Num, RefNum, ToPrimitive};
-use rand::random;
-use std::collections::BTreeMap;
-use std::convert::TryFrom;
+use rand::rngs::OsRng;
+use rand::RngCore;
 
 #[cfg(feature = "big-table")]
-use crate::tables::{MILLER_RABIN_BASE64, MILLER_RABIN_BASE32};
+use crate::tables::{MILLER_RABIN_BASE32, MILLER_RABIN_BASE64};
 
 /// Fast primality test on a u64 integer. It's based on
 /// deterministic Miller-rabin tests. If target is larger than 2^64 or more
@@ -267,8 +272,10 @@ pub(crate) fn factorize64_advanced(cofactors: &[(u64, usize)]) -> Vec<(u64, usiz
             match i % NMETHODS {
                 0 => {
                     // Pollard's rho (quick check)
-                    let start = MontgomeryInt::new(random::<u64>(), &target);
-                    let offset = start.convert(random::<u64>());
+                    let mut key = [0u8; 16];
+                    OsRng.fill_bytes(&mut key);
+                    let start = MontgomeryInt::new(OsRng.next_u64(), &target);
+                    let offset = start.convert(OsRng.next_u64());
                     let max_iter = max_iter_ratio << (target.bits() / 6); // unoptimized heuristic
                     if let (Some(p), _) = pollard_rho(
                         &SmallMint::from(target),
@@ -427,9 +434,15 @@ pub(crate) fn factorize128_advanced(cofactors: &[(u128, usize)]) -> Vec<(u128, u
             const NMETHODS: usize = 3;
             match i % NMETHODS {
                 0 => {
+                    let mut key = [0u8; 16];
+                    OsRng.fill_bytes(&mut key);
+                    let low = OsRng.next_u64() as u128;
+                    let high = OsRng.next_u64() as u128;
                     // Pollard's rho
-                    let start = MontgomeryInt::new(random::<u128>(), &target);
-                    let offset = start.convert(random::<u128>());
+                    let start = MontgomeryInt::new(low + (high * 2u128.pow(64)), &target);
+                    let low = OsRng.next_u64() as u128;
+                    let high = OsRng.next_u64() as u128;
+                    let offset = start.convert(low + (high * 2u128.pow(64)));
                     let max_iter = max_iter_ratio << (target.bits() / 6); // unoptimized heuristic
                     if let (Some(p), _) = pollard_rho(
                         &SmallMint::from(target),
@@ -558,7 +571,7 @@ pub fn nth_prime(n: u64) -> u64 {
 }
 
 /// Calculate the primorial function
-pub fn primorial<T: PrimalityBase + std::iter::Product>(n: usize) -> T {
+pub fn primorial<T: PrimalityBase + iter::Product>(n: usize) -> T {
     NaiveBuffer::new()
         .into_nprimes(n)
         .map(|p| T::from_u64(p).unwrap())
@@ -1036,8 +1049,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::iter::FromIterator;
     use rand::{prelude::SliceRandom, random};
-    use std::iter::FromIterator;
 
     #[test]
     fn is_prime64_test() {
@@ -1046,7 +1059,7 @@ mod tests {
             assert_eq!(SMALL_PRIMES.contains(&x), is_prime64(x as u64));
         }
         assert!(is_prime64(677));
-        
+
         // from PR #7
         assert!(!is_prime64(9773));
         assert!(!is_prime64(13357));

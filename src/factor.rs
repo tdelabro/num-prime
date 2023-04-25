@@ -11,7 +11,10 @@ use crate::traits::ExactRoots;
 use num_integer::{Integer, Roots};
 use num_modular::{ModularCoreOps, ModularUnaryOps};
 use num_traits::{CheckedAdd, FromPrimitive, NumRef, RefNum};
-use std::collections::BTreeMap;
+
+use crate::stdlib::collections::BTreeMap;
+use core::fmt;
+use core::mem;
 
 /// Find factors by trial division, returns a tuple of the found factors and the residual.
 ///
@@ -113,7 +116,7 @@ where
                 return (None, i);
             } else {
                 backtrace = true;
-                a = std::mem::replace(&mut s, T::one()); // s is discarded
+                a = mem::replace(&mut s, T::one()); // s is discarded
                 z = T::one() % target; // clear gcd
                 continue;
             }
@@ -154,7 +157,7 @@ where
 /// In [1] [Mathematics of Computation](https://homes.cerias.purdue.edu/~ssw/gowerthesis804/wthe.pdf)
 /// or [2] [his thesis](https://homes.cerias.purdue.edu/~ssw/gowerthesis804/wthe.pdf)
 /// The code is from [3] [Rosetta code](https://rosettacode.org/wiki/Square_form_factorization)
-pub fn squfof<T: Integer + NumRef + Clone + ExactRoots + std::fmt::Debug>(
+pub fn squfof<T: Integer + NumRef + Clone + ExactRoots + fmt::Debug>(
     target: &T,
     mul_target: T,
     max_iter: usize,
@@ -185,7 +188,7 @@ where
             &*qm1 - b * (&new_p - p)
         };
 
-        *qm1 = std::mem::replace(q, new_q);
+        *qm1 = mem::replace(q, new_q);
         new_p
     }
 
@@ -328,6 +331,7 @@ fn williams_pp1() {}
 mod tests {
     use super::*;
     use crate::mint::SmallMint;
+    use crate::stdlib::Vec;
     use num_modular::MontgomeryInt;
     use rand::random;
 

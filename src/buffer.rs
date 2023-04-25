@@ -20,10 +20,19 @@ use crate::traits::{
     FactorizationConfig, Primality, PrimalityTestConfig, PrimalityUtils, PrimeBuffer,
 };
 use bitvec::{bitvec, prelude::Msb0};
+use core::iter;
 use lru::LruCache;
 use num_integer::Roots;
-use rand::random;
-use std::collections::BTreeMap;
+use rand::rngs::OsRng;
+use rand::RngCore;
+
+#[cfg(not(feature = "std"))]
+use num_traits::float::FloatCore;
+
+use crate::stdlib::collections::BTreeMap;
+use crate::stdlib::slice;
+use crate::stdlib::vec;
+use crate::stdlib::Vec;
 
 /// Extension functions that can utilize pre-generated primes
 pub trait PrimeBufferExt: for<'a> PrimeBuffer<'a> {
@@ -70,11 +79,13 @@ pub trait PrimeBufferExt: for<'a> PrimeBuffer<'a> {
             probability *= 1. - 0.25f32.powi(config.sprp_trials as i32);
         }
         if config.sprp_random_trials > 0 {
+            let mut key = [0u8; 16];
+            OsRng.fill_bytes(&mut key);
             for _ in 0..config.sprp_random_trials {
                 // we have ensured target is larger than 2^64
-                let mut w: u64 = rand::random();
+                let mut w: u64 = OsRng.next_u64();
                 while witness_list.iter().find(|&x| x == &w).is_some() {
-                    w = rand::random();
+                    w = OsRng.next_u64();
                 }
                 witness_list.push(w);
             }
@@ -226,16 +237,18 @@ pub trait PrimeBufferExt: for<'a> PrimeBuffer<'a> {
 
         // try to get a factor using pollard_rho with 4x4 trials
         let below64 = target.to_u64().is_some();
+        let mut key = [0u8; 16];
+        OsRng.fill_bytes(&mut key);
         while config.rho_trials > 0 {
             let (start, offset) = if below64 {
                 (
-                    T::from_u8(random::<u8>()).unwrap() % target,
-                    T::from_u8(random::<u8>()).unwrap() % target,
+                    T::from_u32(OsRng.next_u32()).unwrap() % target,
+                    T::from_u32(OsRng.next_u32()).unwrap() % target,
                 )
             } else {
                 (
-                    T::from_u64(random::<u64>()).unwrap() % target,
-                    T::from_u64(random::<u64>()).unwrap() % target,
+                    T::from_u64(OsRng.next_u64()).unwrap() % target,
+                    T::from_u64(OsRng.next_u64()).unwrap() % target,
                 )
             };
             config.rho_trials -= 1;
@@ -270,7 +283,7 @@ impl NaiveBuffer {
 }
 
 impl<'a> PrimeBuffer<'a> for NaiveBuffer {
-    type PrimeIter = std::slice::Iter<'a, u64>;
+    type PrimeIter = slice::Iter<'a, u64>;
 
     fn contains(&self, num: u64) -> bool {
         self.list.binary_search(&num).is_ok()
@@ -335,7 +348,7 @@ impl NaiveBuffer {
     // RFC 2071 and https://github.com/cramertj/impl-trait-goals/issues/3
 
     /// Calculate the primorial function
-    pub fn primorial<T: PrimalityBase + std::iter::Product>(&mut self, n: usize) -> T {
+    pub fn primorial<T: PrimalityBase + iter::Product>(&mut self, n: usize) -> T {
         self.nprimes(n).map(|&p| T::from_u64(p).unwrap()).product()
     }
 
@@ -344,7 +357,7 @@ impl NaiveBuffer {
     //       for endless prime iter. This can be a method in this trait, or standalone function,
     //       or implement as IntoIter. We can try to implement PrimeBuffer on primal first and see
     //       if it's reasonable to unifiy
-    pub fn primes(&mut self, limit: u64) -> std::iter::Take<<Self as PrimeBuffer>::PrimeIter> {
+    pub fn primes(&mut self, limit: u64) -> iter::Take<<Self as PrimeBuffer>::PrimeIter> {
         self.reserve(limit);
         let position = match self.list.binary_search(&limit) {
             Ok(p) => p + 1,
@@ -354,7 +367,7 @@ impl NaiveBuffer {
     }
 
     /// Returns all primes ≤ `limit` and takes ownership. The primes are sorted.
-    pub fn into_primes(mut self, limit: u64) -> std::vec::IntoIter<u64> {
+    pub fn into_primes(mut self, limit: u64) -> vec::IntoIter<u64> {
         self.reserve(limit);
         let position = match self.list.binary_search(&limit) {
             Ok(p) => p + 1,
@@ -365,7 +378,7 @@ impl NaiveBuffer {
     }
 
     /// Returns primes of certain amount counting from 2. The primes are sorted.
-    pub fn nprimes(&mut self, count: usize) -> std::iter::Take<<Self as PrimeBuffer>::PrimeIter> {
+    pub fn nprimes(&mut self, count: usize) -> iter::Take<<Self as PrimeBuffer>::PrimeIter> {
         let (_, bound) = nth_prime_bounds(&(count as u64))
             .expect("Estimated size of the largest prime will be larger than u64 limit");
         self.reserve(bound);
@@ -374,7 +387,7 @@ impl NaiveBuffer {
     }
 
     /// Returns primes of certain amount counting from 2 and takes ownership. The primes are sorted.
-    pub fn into_nprimes(mut self, count: usize) -> std::vec::IntoIter<u64> {
+    pub fn into_nprimes(mut self, count: usize) -> vec::IntoIter<u64> {
         let (_, bound) = nth_prime_bounds(&(count as u64))
             .expect("Estimated size of the largest prime will be larger than u64 limit");
         self.reserve(bound);
